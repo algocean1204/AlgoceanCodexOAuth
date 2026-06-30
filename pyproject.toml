@@ -1,0 +1,41 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "algocean-codex-oauth"
+version = "0.2.6"
+description = "Drop-in ChatOpenAI replacement for LangChain/LangGraph — local Codex OAuth or deployed OpenAI API key."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [{ name = "algocean1204" }]
+keywords = ["codex", "openai", "oauth", "langgraph", "langchain", "chatgpt", "algocean"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "langchain-core>=0.3.0",
+    "langchain-openai>=0.2.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/algocean1204/AlgoceanCodexOAuth"
+Documentation = "https://github.com/algocean1204/AlgoceanCodexOAuth#readme"
+Repository = "https://github.com/algocean1204/AlgoceanCodexOAuth"
+Issues = "https://github.com/algocean1204/AlgoceanCodexOAuth/issues"
+Changelog = "https://github.com/algocean1204/AlgoceanCodexOAuth/releases"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/algocean_codex_oauth"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/algocean_codex_oauth", "README.md", "LICENSE"]

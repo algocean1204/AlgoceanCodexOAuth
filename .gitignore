@@ -1,0 +1,80 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Packaging / build
+*.egg
+*.egg-info/
+.eggs/
+dist/
+build/
+*.whl
+*.tar.gz
+pip-wheel-metadata/
+share/python-wheels/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Test / type / lint caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Secrets — 절대 커밋 금지
+.env
+.env.*
+!.env.example
+*.pem
+.pypirc
+secrets/
+credentials/
+credentials.json
+*.key
+
+# Codex runtime artifacts
+.codex_final_output.txt
+.codex_output_schema.json
+
+# Local / temp
+*.log
+tmp/
+temp/
+.cache/
+
+# Local AI / editor notes — not part of the public package
+CLAUDE.md
+AGENTS.md
+.cursor/
+*.local.md
+
+# Monorepo / samples (local only, not published)
+IntegrationTest/
+samples/
+examples/
+*.ipynb
+
+# Tests (local dev only, not published)
+tests/
