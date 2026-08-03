@@ -2,10 +2,10 @@
 
 The catalog is read at runtime from ``codex debug models``.
 
-``ignore_user_config`` must match the flag the run will actually use, because
-``codex exec --ignore-user-config`` also ignores ``model_catalog_json``: custom
-providers in ``~/.codex/config.toml`` are only reachable when it is False.
-Listing them otherwise sends users to models the backend rejects with HTTP 400.
+``ignore_user_config`` must match the flag the run will actually use:
+``codex exec --ignore-user-config`` also ignores ``model_catalog_json``, so the
+two settings can yield different lists. Listing the wrong one sends callers to
+models the backend rejects with HTTP 400.
 """
 
 from __future__ import annotations

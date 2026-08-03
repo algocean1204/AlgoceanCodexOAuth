@@ -194,9 +194,8 @@ ai.response_metadata["usage"]["reasoning_output_tokens"]  # 추론 토큰 소모
 
 `auth=api_key`에서는 `reasoning_effort`가 `langchain_openai.ChatOpenAI`로 그대로 전달됩니다.
 
-> `chat()`·`repo_read()`·`repo_write()`는 codex 설정 로딩 여부가 달라 모델 목록도 다릅니다.
-> `chat()`은 `--ignore-user-config`로 돌아 codex 내장 목록만, repo preset은 `~/.codex/config.toml`의
-> 커스텀 provider까지 봅니다. 목록 API도 같은 구분을 따릅니다:
+> `chat()`은 `~/.codex/config.toml`을 무시하고 돌기 때문에 codex 내장 목록만 봅니다.
+> repo preset은 그 설정을 읽으므로 목록이 다를 수 있고, 목록 API도 같은 구분을 따릅니다:
 > `AlgoceanCodexOAuth.models(ignore_user_config=False)`.
 
 ---

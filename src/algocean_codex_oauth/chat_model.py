@@ -52,15 +52,19 @@ class AlgoceanCodexOAuth(BaseChatModel):
     """Drop-in ChatOpenAI replacement — local OAuth or deployed API key."""
 
     model: str = "gpt-5.5"
+
+    # Honoured in BOTH modes. oauth routes effort/verbosity through
+    # `codex exec -c model_*` and applies stop by truncating the reply.
     reasoning_effort: Optional[str] = None
     verbosity: Optional[str] = None
-    # ChatOpenAI parity knobs. api_key forwards them; oauth cannot (the Codex CLI
-    # exposes no sampling config) and reports them via `unsupported_params`.
+    stop: Optional[list[str]] = None
+
+    # api_key ONLY — the Codex CLI exposes no sampling config, so under oauth
+    # these are inert and listed in response_metadata["unsupported_params"].
     temperature: Optional[float] = None
     max_tokens: Optional[int] = None
     top_p: Optional[float] = None
     seed: Optional[int] = None
-    stop: Optional[list[str]] = None
     model_kwargs: dict[str, Any] = Field(default_factory=dict)
     auth: AuthSetting = oauth
     timeout: int = 180

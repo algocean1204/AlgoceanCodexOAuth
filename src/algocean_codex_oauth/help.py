@@ -135,9 +135,8 @@ The catalog is read from `codex debug models` at runtime, so updating the
 codex CLI updates the list. Refresh the in-process cache with:
   AlgoceanCodexOAuth.models(refresh=True)
 
-chat()/LLM-only runs with --ignore-user-config, so it sees only the models
-bundled with codex. repo_read()/repo_write() load ~/.codex/config.toml and can
-reach custom providers — match the list to the mode:
+chat() ignores ~/.codex/config.toml, so it sees only the models bundled with
+codex. repo_read()/repo_write() load it and may see a different list:
   AlgoceanCodexOAuth.models(ignore_user_config=False)
   llm.available_efforts                      # correct for this instance
 
