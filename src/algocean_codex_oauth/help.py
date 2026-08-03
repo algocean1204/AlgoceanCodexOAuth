@@ -108,6 +108,39 @@ Multi-turn
     )
     llm.reset_thread()  # start fresh conversation
 """.strip(),
+    "models": """
+Models and reasoning effort
+---------------------------
+  from algocean_codex_oauth import AlgoceanCodexOAuth, list_models, supported_efforts
+
+  AlgoceanCodexOAuth.print_models()          # slug / default effort / allowed efforts
+  AlgoceanCodexOAuth.models()                # list[ModelInfo]
+  AlgoceanCodexOAuth.efforts("gpt-5.5")      # ('low', 'medium', 'high', 'xhigh')
+
+  llm = AlgoceanCodexOAuth(model="gpt-5.5", reasoning_effort="high")
+  llm = AlgoceanCodexOAuth.chat(model="gpt-5.5", reasoning_effort="low")
+
+  llm.effective_reasoning_effort             # explicit value, else catalog default
+
+  ai = llm.invoke([HumanMessage(content="...")])
+  ai.response_metadata["reasoning_effort"]
+  ai.response_metadata["usage"]["reasoning_output_tokens"]
+
+Effort values: none, minimal, low, medium, high, xhigh, max, ultra
+  — each model accepts a subset; unsupported values raise before any API call.
+
+The catalog is read from `codex debug models` at runtime, so updating the
+codex CLI updates the list. Refresh the in-process cache with:
+  AlgoceanCodexOAuth.models(refresh=True)
+
+chat()/LLM-only runs with --ignore-user-config, so it sees only the models
+bundled with codex. repo_read()/repo_write() load ~/.codex/config.toml and can
+reach custom providers — match the list to the mode:
+  AlgoceanCodexOAuth.models(ignore_user_config=False)
+  llm.available_efforts                      # correct for this instance
+
+auth=api_key forwards reasoning_effort to langchain_openai.ChatOpenAI.
+""".strip(),
     "presets": """
 Presets (oauth only)
 --------------------
@@ -141,6 +174,10 @@ _TOPIC_ALIASES: dict[str, str] = {
     "api_key": "auth",
     "multiturn": "multiturn",
     "thread": "multiturn",
+    "models": "models",
+    "model": "models",
+    "effort": "models",
+    "reasoning": "models",
     "presets": "presets",
     "env": "presets",
     "all": "all",
@@ -165,7 +202,7 @@ def build_help_text(*, topic: str | None = None) -> str:
 
     if key == "all":
         parts = [_SECTIONS["overview"].format(version=__version__)]
-        for name in ("install", "quickstart", "langgraph", "auth", "multiturn", "presets"):
+        for name in ("install", "quickstart", "langgraph", "auth", "multiturn", "models", "presets"):
             parts.append(_SECTIONS[name])
         return "\n\n".join(parts)
 

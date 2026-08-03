@@ -13,6 +13,8 @@ class AlgoceanCodexConfig:
     """Settings passed to the Codex CLI for each invocation."""
 
     model: str = "gpt-5.5"
+    reasoning_effort: str | None = None
+    verbosity: str | None = None
     codex_bin: str = "codex"
     timeout_sec: int = 180
     sandbox: SandboxMode = "read-only"
@@ -26,9 +28,16 @@ class AlgoceanCodexConfig:
     extra_env: dict[str, str] = field(default_factory=dict)
 
     @classmethod
-    def chat(cls, *, model: str = "gpt-5.5", timeout_sec: int = 180) -> AlgoceanCodexConfig:
+    def chat(
+        cls,
+        *,
+        model: str = "gpt-5.5",
+        reasoning_effort: str | None = None,
+        timeout_sec: int = 180,
+    ) -> AlgoceanCodexConfig:
         return cls(
             model=model,
+            reasoning_effort=reasoning_effort,
             workdir=None,
             sandbox="read-only",
             ephemeral=True,
@@ -41,10 +50,12 @@ class AlgoceanCodexConfig:
         workdir: str,
         *,
         model: str = "gpt-5.5",
+        reasoning_effort: str | None = None,
         timeout_sec: int = 300,
     ) -> AlgoceanCodexConfig:
         return cls(
             model=model,
+            reasoning_effort=reasoning_effort,
             workdir=workdir,
             sandbox="read-only",
             ephemeral=True,
@@ -59,10 +70,12 @@ class AlgoceanCodexConfig:
         workdir: str,
         *,
         model: str = "gpt-5.5",
+        reasoning_effort: str | None = None,
         timeout_sec: int = 600,
     ) -> AlgoceanCodexConfig:
         return cls(
             model=model,
+            reasoning_effort=reasoning_effort,
             workdir=workdir,
             sandbox="workspace-write",
             ephemeral=False,

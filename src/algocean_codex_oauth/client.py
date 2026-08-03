@@ -65,10 +65,15 @@ class CodexExecClient:
         resume_thread_id: str | None = None,
     ) -> AsyncIterator[str]:
         """Yield assistant text chunks from codex exec JSONL stdout."""
+        # Without collecting events, _run_stream never reaches the block that
+        # records last_usage / last_thread_id, so streaming callers would get
+        # no token counts at all.
+        events: list[dict[str, Any]] = []
         async for chunk in self._run_stream(
             prompt,
             output_schema=output_schema,
             resume_thread_id=resume_thread_id,
+            collect_events=events,
         ):
             yield chunk
 
@@ -269,6 +274,7 @@ class CodexExecClient:
                     str(final_output_path),
                 ]
             )
+            cmd.extend(self._reasoning_effort_args())
             if self.config.ephemeral:
                 cmd.append("--ephemeral")
             if self.config.ignore_user_config:
@@ -295,6 +301,8 @@ class CodexExecClient:
             ]
         )
 
+        cmd.extend(self._reasoning_effort_args())
+
         if self.config.ephemeral:
             cmd.append("--ephemeral")
 
@@ -312,6 +320,16 @@ class CodexExecClient:
 
         cmd.append("-")
         return cmd
+
+    def _reasoning_effort_args(self) -> list[str]:
+        # codex exec has no dedicated flags; these only travel as config overrides,
+        # which still apply under --ignore-user-config.
+        args: list[str] = []
+        if self.config.reasoning_effort:
+            args.extend(["-c", f"model_reasoning_effort={self.config.reasoning_effort}"])
+        if self.config.verbosity:
+            args.extend(["-c", f"model_verbosity={self.config.verbosity}"])
+        return args
 
     def _extract_agent_text(self, event: dict[str, Any]) -> str:
         if event.get("type") != "item.completed":

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 from langchain_core.messages import (
     AIMessage,
     BaseMessage,
@@ -23,16 +25,41 @@ def messages_to_prompt(
         blocks.append(f"[System]\n{preamble.strip()}")
 
     for message in messages:
-        role = _role_name(message)
-        content = stringify_content(message.content)
-        if not content.strip():
-            continue
-        blocks.append(f"[{role}]\n{content}")
+        block = _render(message)
+        if block:
+            blocks.append(block)
 
     if not blocks:
         raise ValueError("At least one non-empty message is required.")
 
     return "\n\n".join(blocks)
+
+
+def _render(message: BaseMessage) -> str:
+    role = _role_name(message)
+    content = stringify_content(message.content).strip()
+
+    if isinstance(message, ToolMessage):
+        name = getattr(message, "name", None) or "tool"
+        label = f"[Tool result: {name}]"
+        if message.tool_call_id:
+            label = f"[Tool result: {name} (id={message.tool_call_id})]"
+        return f"{label}\n{content}" if content else f"{label}\n(empty)"
+
+    # An assistant turn that only calls tools has empty content — dropping it
+    # would erase the call from history and the agent would loop forever.
+    tool_calls = getattr(message, "tool_calls", None) if isinstance(message, AIMessage) else None
+    if tool_calls:
+        rendered = ", ".join(
+            f"{call.get('name')}({json.dumps(call.get('args') or {}, ensure_ascii=False)})"
+            for call in tool_calls
+        )
+        body = f"{content}\n" if content else ""
+        return f"[{role}]\n{body}Called tools: {rendered}"
+
+    if not content:
+        return ""
+    return f"[{role}]\n{content}"
 
 
 def messages_to_delta_prompt(messages: list[BaseMessage], previous_count: int) -> str:

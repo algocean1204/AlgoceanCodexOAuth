@@ -20,8 +20,10 @@ codex login   # oauth 사용 시 1회 (ChatGPT 로그인)
 from algocean_codex_oauth import AlgoceanCodexOAuth
 from langchain_core.messages import HumanMessage
 
-llm = AlgoceanCodexOAuth.chat(model="gpt-5.5")
+llm = AlgoceanCodexOAuth.chat(model="gpt-5.5", reasoning_effort="high")
 print(llm.invoke([HumanMessage(content="Hello")]).content)
+
+AlgoceanCodexOAuth.print_models()   # 쓸 수 있는 모델 + 모델별 effort
 ```
 
 LangGraph 노드에도 **동일한 `llm` 객체**를 넣으면 됩니다.
@@ -38,8 +40,12 @@ LangGraph 노드에도 **동일한 `llm` 객체**를 넣으면 됩니다.
 | **설치** | `pip install algocean-codex-oauth` (동일) | `pip install algocean-codex-oauth` (동일) |
 | **repo 에이전트** (`repo_read` / `repo_write`) | ✅ | ❌ |
 | **Codex thread resume** | ✅ | ❌ |
+| **tool calling** (`bind_tools`) | ✅ | ✅ |
+| **`reasoning_effort` / `verbosity`** | ✅ | ✅ |
+| **토큰 사용량** (`usage_metadata`) | ✅ | ✅ |
 
 **그래프 코드는 그대로** — `llm`을 만드는 줄만 `auth`와 `model`을 바꾸면 됩니다.
+두 모드의 남은 차이는 [제한 사항](#oauth--api_key-차이-그-외는-동일)에 표로 정리돼 있습니다.
 
 ---
 
@@ -117,7 +123,63 @@ AlgoceanCodexOAuth.help("auth")        # oauth vs api_key
 AlgoceanCodexOAuth.help("all")         # 전체
 ```
 
-토픽: `install`, `quickstart`, `langgraph`, `auth`, `multiturn`, `presets`, `all`
+토픽: `install`, `quickstart`, `langgraph`, `auth`, `multiturn`, `models`, `presets`, `all`
+(`models`는 `effort` · `reasoning`으로도 호출됩니다.)
+
+---
+
+## 모델 목록 · reasoning effort
+
+```python
+from algocean_codex_oauth import AlgoceanCodexOAuth
+
+AlgoceanCodexOAuth.print_models()
+# MODEL          DEFAULT   EFFORTS
+# gpt-5.6-sol    low       low, medium, high, xhigh, max, ultra
+# gpt-5.5        medium    low, medium, high, xhigh
+# ...
+
+AlgoceanCodexOAuth.efforts("gpt-5.5")   # ('low', 'medium', 'high', 'xhigh')
+AlgoceanCodexOAuth.models()             # list[ModelInfo]
+```
+
+목록은 설치된 `codex debug models`에서 런타임에 읽으므로 codex를 업데이트하면 자동 반영됩니다.
+codex CLI가 없으면 내장 목록으로 폴백합니다.
+
+### effort 적용
+
+```python
+llm = AlgoceanCodexOAuth(model="gpt-5.5", reasoning_effort="high")
+llm = AlgoceanCodexOAuth.chat(model="gpt-5.5", reasoning_effort="low")
+llm = AlgoceanCodexOAuth.repo_write("/path/repo", reasoning_effort="xhigh")
+
+llm.effective_reasoning_effort   # 지정값, 없으면 모델 기본값
+llm.available_efforts            # 이 인스턴스가 실제로 쓸 수 있는 effort
+```
+
+값: `none` · `minimal` · `low` · `medium` · `high` · `xhigh` · `max` · `ultra`
+— **모델마다 지원 범위가 다르고**, 미지원 값은 API 호출 전에 `AlgoceanCodexOAuthError`로 막힙니다.
+
+```python
+AlgoceanCodexOAuth(model="gpt-5.5", reasoning_effort="max")
+# AlgoceanCodexOAuthError: reasoning_effort='max' is not supported by model 'gpt-5.5'.
+#   Supported: low, medium, high, xhigh (default: medium).
+```
+
+### 응답에서 확인
+
+```python
+ai = llm.invoke([HumanMessage(content="...")])
+ai.response_metadata["reasoning_effort"]                  # 실제 적용된 effort
+ai.response_metadata["usage"]["reasoning_output_tokens"]  # 추론 토큰 소모량
+```
+
+`auth=api_key`에서는 `reasoning_effort`가 `langchain_openai.ChatOpenAI`로 그대로 전달됩니다.
+
+> `chat()`·`repo_read()`·`repo_write()`는 codex 설정 로딩 여부가 달라 모델 목록도 다릅니다.
+> `chat()`은 `--ignore-user-config`로 돌아 codex 내장 목록만, repo preset은 `~/.codex/config.toml`의
+> 커스텀 provider까지 봅니다. 목록 API도 같은 구분을 따릅니다:
+> `AlgoceanCodexOAuth.models(ignore_user_config=False)`.
 
 ---
 
@@ -165,30 +227,94 @@ llm = AlgoceanCodexOAuth(auth=api_key, model="gpt-4o")
 ### ReAct Agent
 
 ```python
+from langchain_core.tools import tool
 from langgraph.prebuilt import create_react_agent
-from langchain_core.messages import HumanMessage
 from algocean_codex_oauth import AlgoceanCodexOAuth
 
-llm = AlgoceanCodexOAuth(model="gpt-5.5")
-agent = create_react_agent(llm, tools=[])
-result = agent.invoke({"messages": [HumanMessage(content="hello")]})
+@tool
+def add(a: int, b: int) -> int:
+    """Add two numbers."""
+    return a + b
+
+llm = AlgoceanCodexOAuth.chat(model="gpt-5.5", reasoning_effort="low")
+agent = create_react_agent(llm, tools=[add])
+
+result = agent.invoke({"messages": [("user", "What is 17 plus 25? Use the tool.")]})
+print(result["messages"][-1].content)   # 42
 ```
 
 ### Structured Output
 
 ```python
+from typing import Optional
 from pydantic import BaseModel, Field
 from langchain_core.messages import HumanMessage
 from algocean_codex_oauth import AlgoceanCodexOAuth
 
-class Analysis(BaseModel):
-    summary: str = Field(description="요약")
-    risk_level: str = Field(description="low | medium | high")
+class Item(BaseModel):
+    name: str = Field(description="item name")
+    qty: int = Field(description="quantity")
 
-llm = AlgoceanCodexOAuth(model="gpt-5.5")
-structured = llm.with_structured_output(Analysis)
-result = structured.invoke([HumanMessage(content="위험도를 평가해줘.")])
+class Cart(BaseModel):
+    items: list[Item] = Field(description="line items")
+    total: int = Field(description="total quantity")
+    note: Optional[str] = Field(default=None, description="optional note")
+
+llm = AlgoceanCodexOAuth.chat(model="gpt-5.5")
+cart = llm.with_structured_output(Cart).invoke(
+    [HumanMessage(content="Cart has 3 apples and 5 pears. Return structured data.")]
+)
+# Cart(items=[Item(name='apples', qty=3), Item(name='pears', qty=5)], total=8, note=None)
 ```
+
+중첩 모델·리스트·`Optional` 모두 지원합니다. `include_raw=True`면 `{"raw", "parsed", "parsing_error"}`를 돌려줍니다.
+
+---
+
+## Tool calling
+
+```python
+from langchain_core.tools import tool
+from langgraph.prebuilt import create_react_agent
+
+@tool
+def add(a: int, b: int) -> int:
+    """Add two numbers."""
+    return a + b
+
+llm = AlgoceanCodexOAuth.chat(model="gpt-5.5")
+
+ai = llm.bind_tools([add]).invoke([HumanMessage(content="1+2?")])
+ai.tool_calls   # [{'name': 'add', 'args': {'a': 1, 'b': 2}, 'id': 'call_0', ...}]
+
+agent = create_react_agent(llm, tools=[add])   # 그대로 동작
+```
+
+`tool_choice`도 ChatOpenAI와 동일하게 `"auto"` / `"required"` / `"none"` / 툴 이름을 받습니다.
+
+> oauth 모드에는 Codex CLI에 tool-call API가 없어 `--output-schema` 기반으로 에뮬레이션합니다.
+> 호출부 코드는 ChatOpenAI와 동일하고, 바인딩하지 않은 툴 이름은 프롬프트에서 차단됩니다.
+> api_key 모드는 ChatOpenAI 네이티브 tool calling에 그대로 위임합니다.
+
+---
+
+## 토큰 사용량
+
+```python
+ai = llm.invoke([HumanMessage(content="...")])
+
+ai.usage_metadata
+# {'input_tokens': 100, 'output_tokens': 30, 'total_tokens': 130,
+#  'input_token_details': {'cache_read': 40},
+#  'output_token_details': {'reasoning': 12}}
+
+ai.response_metadata["model_name"]     # ChatOpenAI 호환 키
+ai.response_metadata["token_usage"]
+ai.response_metadata["finish_reason"]  # 'stop' | 'tool_calls'
+```
+
+LangGraph·LangSmith·콜백의 토큰 집계가 ChatOpenAI와 동일하게 동작합니다.
+스트리밍에서도 마지막 청크에 usage가 실립니다.
 
 ---
 
@@ -199,7 +325,15 @@ result = structured.invoke([HumanMessage(content="위험도를 평가해줘.")])
 | `llm.invoke(messages)` | 동일 |
 | `await llm.ainvoke(messages)` | 동일 |
 | `llm.astream(messages)` | 동일 |
-| `llm.with_structured_output(schema)` | 동일 |
+| `llm.batch(inputs)` | 동일 |
+| `llm.with_structured_output(schema)` | 동일 (중첩·리스트·`Optional` 포함) |
+| `llm.bind_tools(tools, tool_choice=...)` | 동일 |
+| `ai.tool_calls` | 동일 |
+| `ai.usage_metadata` | 동일 |
+| `ai.response_metadata["model_name" / "token_usage" / "finish_reason"]` | 동일 |
+| `stop=[...]` | 동일 |
+| `reasoning_effort` / `verbosity` | 동일 |
+| `create_react_agent(llm, tools=[...])` | 수정 없이 동작 |
 | LangGraph `state["messages"]` 멀티턴 | `thread_mode="messages"` (기본) |
 | Codex thread resume | `thread_mode="codex_resume"` (oauth 전용) |
 | 새 대화 | `llm.reset_thread()` (oauth) |
@@ -273,6 +407,10 @@ async for chunk in llm.astream([HumanMessage(content="hello")]):
     print(chunk.content, end="", flush=True)
 ```
 
+> oauth 모드에서 `codex exec --json`은 토큰 델타 이벤트를 내보내지 않습니다.
+> 응답은 완료 시점에 한 청크로 도착합니다 (TTFT ≈ 전체 응답시간).
+> api_key 모드는 OpenAI SDK 토큰 스트리밍을 그대로 씁니다.
+
 ---
 
 ## 로컬 ↔ 배포 전환
@@ -294,6 +432,14 @@ def get_llm():
 ```python
 AlgoceanCodexOAuth(
     model="gpt-5.5",
+    reasoning_effort=None,         # none|minimal|low|medium|high|xhigh|max|ultra (모델별 상이)
+    verbosity=None,                # low | medium | high — 양쪽 모드 지원
+    temperature=None,              # ↓ api_key 전용. oauth 는 codex CLI 미지원 →
+    max_tokens=None,               #    response_metadata["unsupported_params"] 로 알려줌
+    top_p=None,
+    seed=None,
+    stop=None,                     # 양쪽 모드 지원 (oauth 는 후처리 절단)
+    model_kwargs={},               # api_key 로 그대로 전달
     auth=oauth,                    # oauth | api_key
     timeout=180,
     sandbox="read-only",           # oauth 전용
@@ -319,6 +465,19 @@ AlgoceanCodexOAuth(
 - **oauth** — 개인 로컬 / 개인 구독 용도. SaaS 서버 배포에는 부적합.
 - **api_key** — OpenAI API 과금. repo sandbox / codex resume 미지원.
 - **oauth** — Codex CLI(`codex`)가 PATH에 있어야 합니다.
+
+### oauth ↔ api_key 차이 (그 외는 동일)
+
+| 기능 | oauth | api_key |
+|---|---|---|
+| invoke / ainvoke / astream / batch | ✅ | ✅ |
+| 멀티턴 (messages) · structured output | ✅ | ✅ |
+| `bind_tools` · `tool_calls` | ✅ (output-schema 에뮬레이션) | ✅ (네이티브) |
+| `usage_metadata` · `token_usage` · `finish_reason` | ✅ | ✅ |
+| `reasoning_effort` · `verbosity` · `stop` | ✅ | ✅ |
+| `temperature` · `max_tokens` · `top_p` · `seed` | ❌ codex CLI 미지원<br>`unsupported_params` 로 통지 | ✅ |
+| 토큰 단위 스트리밍 | ❌ 완료 시 1청크 | ✅ |
+| `repo_read` / `repo_write` / `codex_resume` | ✅ | ❌ |
 
 ---
 
