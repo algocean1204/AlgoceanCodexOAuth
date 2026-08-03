@@ -102,15 +102,33 @@ response = llm.invoke([HumanMessage(content="FastAPI Depends를 짧게 설명해
 await llm.ainvoke([HumanMessage(content="...")])
 ```
 
-### 환경 변수로 모드 선택
+### 환경 변수 / `.env`로 모드 선택
 
 ```python
 from algocean_codex_oauth import AlgoceanCodexOAuth
 
-llm = AlgoceanCodexOAuth.from_env(model="gpt-4o")
+llm = AlgoceanCodexOAuth.from_env(model="gpt-5.5")
 ```
 
-`ALGOCEANCODEXOAUTH_AUTH=api_key`일 때 `ALGOCEANCODEXOAUTH_API`가 필요합니다.
+`from_env()`가 모드를 정하는 규칙 — 위에서부터 먼저 맞는 것:
+
+| 상황 | 결과 |
+|---|---|
+| `ALGOCEANCODEXOAUTH_AUTH` 지정 | 그 값 (`oauth` / `api_key`) |
+| `ALGOCEANCODEXOAUTH_API`만 있음 | `api_key` |
+| 둘 다 없음 | `oauth` (구독) |
+
+키만 넣고 `AUTH`를 잊어도 조용히 구독 모드로 새지 않습니다.
+구독을 쓰고 싶은데 키가 환경에 남아 있다면 `ALGOCEANCODEXOAUTH_AUTH=oauth`를 명시하세요.
+
+두 변수 모두 **실제 환경변수 → 작업 디렉터리의 `.env`** 순으로 읽습니다.
+
+```bash
+# .env
+ALGOCEANCODEXOAUTH_API=sk-...
+```
+
+`.env` 파싱은 `KEY=VALUE` 한 줄 형식만 지원하며 추가 의존성은 없습니다.
 
 ### 터미널 가이드 — `help()`
 
@@ -455,8 +473,10 @@ AlgoceanCodexOAuth(
 
 | 변수 | 설명 |
 |---|---|
-| `ALGOCEANCODEXOAUTH_API` | api_key 모드 OpenAI API key |
-| `ALGOCEANCODEXOAUTH_AUTH` | `oauth` 또는 `api_key` (기본 `oauth`) |
+| `ALGOCEANCODEXOAUTH_API` | api_key 모드 OpenAI API key. 이것만 있어도 `from_env()`는 api_key로 갑니다 |
+| `ALGOCEANCODEXOAUTH_AUTH` | `oauth` 또는 `api_key`. 지정하면 항상 이 값이 우선 |
+
+둘 다 실제 환경변수를 먼저 보고, 없으면 작업 디렉터리의 `.env`에서 읽습니다.
 
 ---
 

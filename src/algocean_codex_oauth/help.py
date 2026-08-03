@@ -32,7 +32,9 @@ Local oauth (one-time):
 
 Production api_key:
   export ALGOCEANCODEXOAUTH_API=<your-openai-api-key>
-  export ALGOCEANCODEXOAUTH_AUTH=api_key   # optional; default is oauth
+  export ALGOCEANCODEXOAUTH_AUTH=api_key   # optional; the key alone is enough
+
+Both variables fall back to a .env file in the working directory.
 """.strip(),
     "quickstart": """
 Quick Start
@@ -148,9 +150,11 @@ Presets (oauth only)
   AlgoceanCodexOAuth.repo_read(workdir="/path/to/repo")
   AlgoceanCodexOAuth.repo_write(workdir="/path/to/repo")
 
-Environment variables:
-  ALGOCEANCODEXOAUTH_API   — OpenAI API key (required for auth=api_key)
-  ALGOCEANCODEXOAUTH_AUTH  — oauth | api_key (default: oauth)
+Environment variables (real env first, then ./.env):
+  ALGOCEANCODEXOAUTH_API   — OpenAI API key. On its own it selects api_key.
+  ALGOCEANCODEXOAUTH_AUTH  — oauth | api_key. When set it always wins.
+
+from_env() order: AUTH if set → api_key if a key is present → oauth.
 
 Links:
   https://github.com/algocean1204/AlgoceanCodexOAuth

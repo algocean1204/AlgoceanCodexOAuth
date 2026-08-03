@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "algocean-codex-oauth"
-version = "0.4.0"
+version = "0.4.1"
 description = "Drop-in ChatOpenAI replacement for LangChain/LangGraph — local Codex OAuth or deployed OpenAI API key."
 readme = "README.md"
 license = "MIT"
