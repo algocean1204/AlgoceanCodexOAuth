@@ -6,7 +6,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/algocean-codex-oauth?style=flat-square)](https://pypi.org/project/algocean-codex-oauth/)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue?style=flat-square)
-![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
+![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)
 
 <hr>
 
@@ -125,7 +125,7 @@ result = agent.invoke({"messages": [("user", "What is 17 plus 25? Use the tool."
 
 ## 라이선스
 
-[MIT License](LICENSE)
+[Apache License 2.0](LICENSE)
 
 ## 링크
 

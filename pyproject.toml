@@ -7,14 +7,14 @@ name = "algocean-codex-oauth"
 version = "0.4.2"
 description = "Drop-in ChatOpenAI replacement for LangChain/LangGraph — local Codex OAuth or deployed OpenAI API key."
 readme = "README.md"
-license = "MIT"
+license = "Apache-2.0"
 requires-python = ">=3.10"
 authors = [{ name = "algocean1204" }]
 keywords = ["codex", "openai", "oauth", "langgraph", "langchain", "chatgpt", "algocean"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
